@@ -1,6 +1,6 @@
 <?php
 session_start();
-$conn = new mysqli("localhost", "root", "Abc123", "socialnet");
+include 'db_connect.php';
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
