@@ -1,5 +1,5 @@
 <?php
-$conn = new mysqli("localhost", "root", "Abc123", "socialnet");
+include 'db_connect.php';
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
