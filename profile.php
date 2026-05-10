@@ -1,54 +1,96 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) { header("Location: signin.php"); exit(); }
+include('db_connect.php');
 
-$conn = new mysqli("localhost", "root", "Abc123", "socialnet");
-
-
-$target_user = isset($_GET['owner']) ? $_GET['owner'] : "";
-
-if ($target_user == "") {
-    $my_id = $_SESSION['user_id'];
-    $res = $conn->query("SELECT username FROM account WHERE id = $my_id");
-    $me = $res->fetch_assoc();
-    $target_user = $me['username'];
+if (!isset($_SESSION['user_id'])) {
+    header("Location: signin.php");
+    exit();
 }
 
+$view_id = isset($_GET['id']) ? $_GET['id'] : $_SESSION['user_id'];
 
-$stmt = $conn->prepare("SELECT fullname, username, description, avatar FROM account WHERE username = ?");
-$stmt->bind_param("s", $target_user);
+$stmt = $conn->prepare("SELECT * FROM account WHERE id = ?");
+$stmt->bind_param("i", $view_id);
 $stmt->execute();
-$user_info = $stmt->get_result()->fetch_assoc();
+$result = $stmt->get_result();
+$user_data = $result->fetch_assoc();
+
+if (!$user_data) {
+    header("Location: index.php");
+    exit();
+}
+
+$avatar_path = !empty($user_data['avatar']) ? "uploads/" . $user_data['avatar'] : "uploads/avatar_1.jpg";
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Profile - <?php echo $user_data['fullname']; ?></title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .profile-card { background: white; padding: 30px; border-radius: 15px; max-width: 500px; margin: auto; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .avatar-large { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .bio { font-style: italic; color: #666; margin-top: 15px; text-align: left; background: #f9f9f9; padding: 15px; border-radius: 8px; }
+        * { font-family: 'Sonorous', sans-serif; }
+        body { 
+            background-color: #DACADD; 
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { 
+            width: 90%; 
+            max-width: 1200px; 
+            background: white;
+            margin-top: 30px;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+        }
+        .nickname { color: #5B3765; font-weight: bold; font-size: 1.2rem; }
+        .about-section {
+            background-color: #C3B3D4; 
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            margin-top: 20px;
+        }
+        .edit-btn {
+            background: #5B3765;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div class="profile-card">
-        <?php include 'menubar.php'; ?>
-        
-        <?php if ($user_info): ?>
-            <img src="<?php echo $user_info['avatar']; ?>" class="avatar-large">
-            
-            <h1 style="margin-bottom: 5px;"><?php echo htmlspecialchars($user_info['fullname']); ?></h1>
-            <p style="color: #1877f2; font-weight: bold;">@<?php echo htmlspecialchars($user_info['username']); ?></p>
-            
-            <div class="bio">
-                <strong>About Me:</strong>
-                <p><?php echo nl2br(htmlspecialchars($user_info['description'])); ?></p>
+
+<?php include('menubar.php'); ?>
+
+<div class="container">
+    <div class="profile-header">
+        <img src="<?php echo $avatar_path; ?>" style="width: 180px; height: 180px; border-radius: 50%; border: 4px solid #5B3765; object-fit: cover;">
+        <div class="info">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <h1 style="margin: 0; color: #333;"><?php echo $user_data['fullname']; ?></h1>
+                <?php if ($view_id == $_SESSION['user_id']): ?>
+                    <a href="setting.php" class="edit-btn">Edit Profile</a>
+                <?php endif; ?>
             </div>
-        <?php else: ?>
-            <p>User not found!</p>
-        <?php endif; ?>
+            <p class="nickname">@<?php echo $user_data['username']; ?></p>
+            <div class="about-section">
+                <h3 style="margin-top: 0;">About Me:</h3>
+                <p><?php echo $user_data['description']; ?></p>
+            </div>
+        </div>
     </div>
+</div>
+
 </body>
 </html>

@@ -1,68 +1,96 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) { header("Location: signin.php"); exit(); }
+include('db_connect.php');
 
-$conn = new mysqli("localhost", "root", "Abc123", "socialnet");
+if(!isset($_SESSION['user_id'])) { header("Location: signin.php"); exit(); }
 $user_id = $_SESSION['user_id'];
-$message = "";
+$msg = ""; 
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        if (isset($_POST['description'])) {
-        $new_desc = $_POST['description'];
-        $stmt = $conn->prepare("UPDATE account SET description = ? WHERE id = ?");
-        $stmt->bind_param("si", $new_desc, $user_id);
-        $stmt->execute();
-        $message = "Profile updated!";
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $description = $_POST['description'];
+    
+    if (!empty($_FILES['avatar']['name'])) {
+        $avatar_name = time() . '_' . $_FILES['avatar']['name'];
+        move_uploaded_file($_FILES['avatar']['tmp_name'], "uploads/" . $avatar_name);
+        $sql = "UPDATE account SET description = ?, avatar = ? WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssi", $description, $avatar_name, $user_id);
+    } else {
+        $sql = "UPDATE account SET description = ? WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("si", $description, $user_id);
     }
-
-        if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] == 0) {
-        $target_dir = "uploads/";
-        $file_ext = pathinfo($_FILES["avatar"]["name"], PATHINFO_EXTENSION);
-        $file_name = "avatar_" . $user_id . "." . $file_ext; 
-        $target_file = $target_dir . $file_name;
-
-        if (move_uploaded_file($_FILES["avatar"]["tmp_name"], $target_file)) {
-            $stmt_img = $conn->prepare("UPDATE account SET avatar = ? WHERE id = ?");
-            $stmt_img->bind_param("si", $target_file, $user_id);
-            $stmt_img->execute();
-            $message = "Avatar uploaded successfully!";
-        }
+    
+    if ($stmt->execute()) {
+        $msg = "Update successfully!"; 
     }
 }
 
-$res = $conn->query("SELECT description, avatar FROM account WHERE id = $user_id");
-$user = $res->fetch_assoc();
+
+$stmt = $conn->prepare("SELECT * FROM account WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$user_data = $stmt->get_result()->fetch_assoc();
+$avatar_path = !empty($user_data['avatar']) ? "uploads/" . $user_data['avatar'] : "uploads/avatar_1.jpg";
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
     <title>Settings - SocialNet</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 30px; border-radius: 10px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .avatar-preview { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 2px solid #1877f2; }
-        textarea { width: 100%; height: 80px; margin-bottom: 10px; }
-        .btn { background: #1877f2; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; }
+        * { font-family: 'Sonorous', sans-serif; box-sizing: border-box; }
+        body { background-color: #DACADD; margin: 0; padding: 0; }
+        .main-content { display: flex; flex-direction: column; align-items: center; padding-top: 30px; }
+        .container { width: 90%; max-width: 600px; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; }
+        .avatar-preview { width: 150px; height: 150px; border-radius: 50%; border: 4px solid #5B3765; object-fit: cover; margin-bottom: 20px; }
+        .custom-file-upload { display: inline-block; padding: 10px 20px; background: #f0f0f0; border-radius: 10px; cursor: pointer; border: 1px dashed #5B3765; color: #5B3765; width: 100%; text-align: center; }
+        #file-name { display: block; margin-top: 10px; color: #5B3765; font-weight: bold; font-size: 0.9rem; }
+        .success-text { color: #75c9c8 !important; } 
+        label { font-weight: bold; color: #5B3765; display: block; margin-bottom: 10px; text-align: left; }
+        textarea { width: 100%; border-radius: 15px; padding: 15px; border: 1px solid #C3B3D4; outline: none; resize: none; margin-bottom: 20px; }
+        .save-btn { background: #5B3765; color: white; border: none; padding: 15px; border-radius: 25px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <?php include 'menubar.php'; ?>
-        <h2>Account Settings</h2>
-        <?php if($message) echo "<p style='color:green'>$message</p>"; ?>
-        
-        <form method="POST" enctype="multipart/form-data">
-            <p>Current Avatar:</p>
-            <img src="<?php echo $user['avatar']; ?>" class="avatar-preview">
-            <br>
-            <input type="file" name="avatar">
-            <hr>
-            <p>About Me:</p>
-            <textarea name="description"><?php echo htmlspecialchars($user['description']); ?></textarea>
-            <input type="submit" class="btn" value="Save All Changes">
-        </form>
+    <?php include 'menubar.php'; ?>
+    <div class="main-content">
+        <div class="container">
+            <h1 style="color: #5B3765;">Account Settings</h1>
+            <img src="<?php echo $avatar_path; ?>" class="avatar-preview" id="preview-img">
+            
+            <form action="setting.php" method="POST" enctype="multipart/form-data">
+                <div style="margin: 20px 0; text-align: left;">
+                    <label>Change Avatar:</label>
+                    <label for="file-upload" class="custom-file-upload">Click to choose an image</label>
+                    <input id="file-upload" name="avatar" type="file" style="display:none;"/>
+                    
+                    <span id="file-name" class="<?php echo ($msg != "") ? 'success-text' : ''; ?>">
+                        <?php echo ($msg != "") ? $msg : "No file chosen"; ?>
+                    </span>
+                </div>
+                
+                <label>About Me:</label>
+                <textarea name="description" rows="4"><?php echo $user_data['description']; ?></textarea>
+                <button type="submit" class="save-btn">Save All Changes</button>
+            </form>
+        </div>
     </div>
+
+    <script>
+        const fileInput = document.getElementById('file-upload');
+        const fileName = document.getElementById('file-name');
+        const previewImg = document.getElementById('preview-img');
+
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                fileName.classList.remove('success-text'); 
+                fileName.textContent = "Selected: " + this.files[0].name;
+                const reader = new FileReader();
+                reader.onload = e => previewImg.src = e.target.result;
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    </script>
 </body>
 </html>

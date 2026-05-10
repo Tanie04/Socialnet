@@ -1,54 +1,41 @@
 <?php
 session_start();
-// 1. Redirect to Signin Page if not logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: signin.php");
-    exit();
-}
-
-$conn = new mysqli("localhost", "root", "Abc123", "socialnet");
-$user_id = $_SESSION['user_id'];
-
-// 2. Fetch logged-in user details
-$stmt = $conn->prepare("SELECT username, fullname FROM account WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$current_user = $stmt->get_result()->fetch_assoc();
-
-// 3. Fetch list of other users (for the Home Page requirement)
-$others = $conn->query("SELECT username, fullname FROM account WHERE id != $user_id");
+include('db_connect.php');
+if(!isset($_SESSION['user_id'])) { header("Location: signin.php"); exit(); }
+$sql = "SELECT * FROM account WHERE id != " . $_SESSION['user_id'];
+$result = $conn->query($sql);
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>SocialNet - Home</title>
+    <title>Home - SocialNet</title>
     <style>
-        body { font-family: sans-serif; margin: 40px; background: #f4f7f6; }
-        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .user-list { margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
-        .user-item { padding: 10px; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; }
-        .btn-profile { background: #3498db; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 0.8em; }
+        * { font-family: 'Sonorous', sans-serif; box-sizing: border-box; }
+        body { background-color: #DACADD; margin: 0; padding: 0; }
+        .main-content { display: flex; flex-direction: column; align-items: center; width: 100%; padding-top: 30px; }
+        .container { width: 95%; max-width: 1000px; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        h1 { color: #5B3765; }
+        .user-card { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #f5f5f5; transition: 0.3s; border-radius: 15px; }
+        .user-card:hover { background-color: #fcfaff; }
+        .view-btn { background: #5B3765; color: white; padding: 10px 25px; border-radius: 25px; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <?php include 'menubar.php'; ?>
-        
-        <h1>Welcome, <?php echo htmlspecialchars($current_user['fullname']); ?>!</h1>
-        <p><strong>Username:</strong> <?php echo htmlspecialchars($current_user['username']); ?></p>
-
-        <div class="user-list">
-            <h3>Explore Other Users</h3>
-            <?php while($row = $others->fetch_assoc()): ?>
-                <div class="user-item">
-                    <span><?php echo $row['fullname']; ?> (@<?php echo $row['username']; ?>)</span>
-                    <a href="profile.php?owner=<?php echo $row['username']; ?>" class="btn-profile">View Profile</a>
+    <?php include 'menubar.php'; ?>
+    <div class="main-content">
+        <div class="container">
+            <h1>Welcome, <?php echo $_SESSION['username']; ?>!</h1>
+            <h3 style="color: #75c9c8; margin-bottom: 30px;">Explore Other Users</h3>
+            <?php while($row = $result->fetch_assoc()): ?>
+                <div class="user-card">
+                    <span style="font-size: 1.2rem; color: #333;">
+                        <strong><?php echo $row['fullname']; ?></strong> 
+                        <span style="color: #5B3765; margin-left: 10px;">@<?php echo $row['username']; ?></span>
+                    </span>
+                    <a href="profile.php?id=<?php echo $row['id']; ?>" class="view-btn">View Profile</a>
                 </div>
             <?php endwhile; ?>
         </div>
     </div>
 </body>
 </html>
-
