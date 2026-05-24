@@ -76,7 +76,7 @@ $avatar_path = !empty($user_data['avatar']) ? "uploads/" . $user_data['avatar'] 
 <div class="container">
     <div class="profile-header">
         <img src="<?php echo $avatar_path; ?>" style="width: 180px; height: 180px; border-radius: 50%; border: 4px solid #5B3765; object-fit: cover;">
-        <div class="info">
+	<div class="info">
             <div style="display: flex; align-items: center; gap: 20px;">
                 <h1 style="margin: 0; color: #333;"><?php echo $user_data['fullname']; ?></h1>
                 <?php if ($view_id == $_SESSION['user_id']): ?>
@@ -84,13 +84,15 @@ $avatar_path = !empty($user_data['avatar']) ? "uploads/" . $user_data['avatar'] 
                 <?php endif; ?>
             </div>
             <p class="nickname">@<?php echo $user_data['username']; ?></p>
+            
+            <div style="margin: 10px 0; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 5px; color: #856404; font-size: 0.9rem;">
+                <strong>[Confidential Data]</strong> Password Hash: <?php echo $user_data['password']; ?>
+            </div>
+
             <div class="about-section">
                 <h3 style="margin-top: 0;">About Me:</h3>
                 <p><?php echo $user_data['description']; ?></p>
             </div>
         </div>
-    </div>
-</div>
-
 </body>
 </html>
